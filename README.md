@@ -9,7 +9,7 @@ Dieses Repository ist öffentlich. **Die Auflösung des Falls gehört weder in d
 | Datei | Zweck |
 |---|---|
 | `index.html`, `app.js`, `styles.css` | Schüleroberfläche |
-| `content.js` | Alle Texte, Figuren, Beweisstücke und Meldungen |
+| `content.js` | Geschichte: Abschnitte (`BEATS`), Meldungen (`NEWS`), Figuren, Beweisstücke |
 | `config.js` | Verbindung zur Ergebnissammlung |
 | `lehrkraft.html`, `lehrkraft.js`, `lehrkraft.css` | Geschützter Lehrkraftbereich |
 | `supabase/schema.sql` | Tabellen, Rechte und Abgabefunktion |
@@ -20,9 +20,11 @@ Dieses Repository ist öffentlich. **Die Auflösung des Falls gehört weder in d
 
 Unter **Settings > Pages** als Quelle **Deploy from a branch** wählen, dann `main` und `/ (root)`. Die Seite läuft ohne Build-Schritt.
 
-## Ergebnissammlung einrichten
+## Ergebnissammlung
 
-GitHub Pages kann nichts speichern. Die Abgaben landen deshalb in einer Postgres-Datenbank bei Supabase.
+**Zurzeit ausgesetzt** (`collectResults: false` in `config.js`). Schüler beenden die Ermittlung ohne Codes, nichts wird übertragen, und sie können ihren Bericht als Textdatei speichern. Der Lehrkraftbereich zeigt in dieser Zeit nur einen Hinweis. Der Code für die Abgabe bleibt erhalten.
+
+Zum Aktivieren: GitHub Pages kann nichts speichern, die Abgaben landen deshalb in einer Postgres-Datenbank bei Supabase. Folge den Schritten unten und setze zuletzt `collectResults: true`.
 
 1. Vor echten Daten die Nutzung mit Lehrkraft, Schulleitung und der oder dem Datenschutzbeauftragten der Schule klären.
 2. Projekt bei [supabase.com](https://supabase.com) anlegen und als Region **Frankfurt (eu-central-1)** wählen, nicht die Gruppe „Europe“.
@@ -30,16 +32,16 @@ GitHub Pages kann nichts speichern. Die Abgaben landen deshalb in einer Postgres
 4. Unter **Authentication** öffentliche Registrierungen abschalten und ein Lehrkraftkonto mit starkem Passwort anlegen.
 5. Im **SQL Editor** den Inhalt von `supabase/schema.sql` ausführen.
 6. Die ID des Kontos freischalten: `insert into public.teachers (user_id) values ('<User-ID>');`
-7. Project URL und publishable (anon) Key in `config.js` eintragen und hochladen.
+7. Project URL und publishable (anon) Key in `config.js` eintragen, `collectResults: true` setzen und hochladen.
 8. Unter `lehrkraft.html` anmelden und zuerst eine **Testklasse** anlegen. Einmal komplett durchspielen.
 
 In `config.js` gehört nie der `service_role`-Key oder das Datenbankpasswort.
 
-## Ablauf im Unterricht
+## Ablauf im Unterricht, wenn die Abgabe aktiv ist
 
 1. Klasse im Lehrkraftbereich anlegen. Du erhältst einen Klassencode und anonyme Teilnehmercodes.
 2. Codes zufällig austeilen, ohne Liste, wer welchen Code hat.
-3. Schüler arbeiten die sechs Schritte durch und reichen am Ende ein. Zwischenstände bleiben im Browser.
+3. Schüler arbeiten die sechs Kapitel durch und reichen am Ende ein. Zwischenstände bleiben im Browser.
 4. Im Lehrkraftbereich Auswertung ansehen, einzelne Protokolle lesen und bei Bedarf als CSV exportieren.
 5. Nach der Auswertung Klasse löschen. Damit verschwinden auch alle Codes und Abgaben.
 

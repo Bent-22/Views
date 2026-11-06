@@ -80,7 +80,7 @@ createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   if (url.pathname === '/config.js') {
     res.writeHead(200, { 'Content-Type': 'text/javascript' });
-    return res.end(`window.VIEWS_CONFIG = { supabaseUrl: 'http://localhost:${PORT}', supabaseKey: 'test-key' };`);
+    return res.end(`window.VIEWS_CONFIG = { collectResults: true, supabaseUrl: 'http://localhost:${PORT}', supabaseKey: 'test-key' };`);
   }
   if (/^\/(auth|rest|__test)\//.test(url.pathname)) {
     let raw = '';

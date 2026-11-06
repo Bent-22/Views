@@ -17,7 +17,15 @@ Das Buch lag bei der Erstellung nicht vor. Romanbezüge stammen aus dem Klappent
 | Mob tötet Unbeteiligten, Polizist stirbt bei Granatenanschlag | eine Rezension | ja |
 | Yasira wird suspendiert | zwei Rezensionen | Reihenfolge der Ereignisse |
 
+## Abfolge der Geschichte
+
+Belegt ist diese Reihenfolge: Lena verschwindet, drei Tage später das Video, Yasira bekommt den Fall, während ihr Date durch das Video unterbrochen wird, Demonstrationen, Aufstieg des Aktiven Heimatschutzes, ein Unbeteiligter stirbt, Polizist stirbt bei einer Demonstration, Yasira wird suspendiert. Die genaue Reihenfolge der letzten Ereignisse ist aus den Rezensionen nicht sicher abzulesen.
+
+Bitte außerdem prüfen: Eine Rezension beschreibt, dass Bär in einem Video einen Mann erschießt, eine andere, dass ein Mob einen Unbeteiligten tötet. Das könnte dasselbe Ereignis sein. Die Simulation führt beide getrennt und zeigt die Tat in Bärs Video nicht.
+
 ## Für die Simulation erstellt
+
+Alle Tage und Uhrzeiten sind Simulationsdetails, nur Tag 1 und Tag 4 als „drei Tage später“ folgen dem Roman. In `content.js` ist ergänztes Beweismaterial mit `sim: true` markiert.
 
 Alle Uhrzeiten und Tagesangaben, der Chat, die Vernehmung des Freundes, Emils Aussage zur Jacke, die Kleidungsnotiz, Stefans Zeitstempel, die Tongutachten, die Forensik, die Hotline-Zahlen, alle Beiträge und Meldungen sowie der „Tagesfunke“. Das sind keine Romanereignisse.
 

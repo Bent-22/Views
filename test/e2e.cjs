@@ -14,7 +14,18 @@ const noOverflow = async (page, label) => {
   assert.ok(over <= 1, `horizontaler Überlauf ${over}px: ${label}`);
 };
 
-async function journey(context, code, label) {
+const go = (page) => page.click('[data-act="next"]');
+const read = (page) => page.click('[data-act="read"]');
+const sort = async (page, pairs) => { for (const [id, v] of pairs) { await page.click(`[data-act="sort"][data-id="${id}"][data-v="${v}"]`); } };
+const pick = (page, key, id) => page.click(`[data-act="choice"][data-key="${key}"][data-id="${id}"]`);
+const eilVisible = async (page, head) => {
+  const el = page.locator('.flash h1');
+  assert.ok((await el.textContent()).includes(head), `Meldung fehlt: ${head}`);
+  const box = await el.boundingBox();
+  assert.ok(box.y >= 0 && box.y < 500, 'Meldung nicht im sichtbaren Bereich');
+};
+
+async function journey(context, code, label, collect) {
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -23,103 +34,160 @@ async function journey(context, code, label) {
   await shot(page, `${label}-1-start`);
   await page.click('[data-act="begin"]');
 
-  // Später freigeschaltete Inhalte dürfen nicht sichtbar sein
-  const early = await page.textContent('body');
-  assert.ok(!early.includes('Bär') && !early.includes('Emil') && !early.includes('Forensik'), 'Spätere Inhalte sind sichtbar');
+  // Figuren und Ereignisse dürfen nicht vorzeitig sichtbar sein
+  const later = ['Yasira', 'Stefan', 'Bär', 'Emil', 'BKA', 'Video', 'Heimatschutz', 'Forensik'];
+  const check = async (words) => { const t = await page.textContent('body'); words.forEach((w) => assert.ok(!t.includes(w), `${w} ist zu früh sichtbar`)); };
+  await check(later);
+  await eilVisible(page, '16-Jährige vermisst');
+  await shot(page, `${label}-2-eilmeldung`);
   assert.equal(await page.locator('[data-act="next"]').count(), 0);
-  ok('Schritt 1 gesperrt, keine späteren Inhalte');
+  await read(page);
+  await sort(page, [['s1', 'fakt'], ['s2', 'behauptung'], ['s3', 'meinung']]);
+  await pick(page, 'hunch', 'weg');
+  await check(later);
+  await shot(page, `${label}-3-kapitel1`);
+  await go(page);
+  ok('Kapitel 1: Meldung, Figuren, Einordnung');
 
-  await act(page, 'start-choice', 'video');
-  await shot(page, `${label}-2-auftrag`);
-  await page.click('[data-act="next"]');
-
-  for (const id of ['t1', 't2', 't3', 't4', 't5']) { await act(page, 'timeline', id); }
+  await eilVisible(page, 'Suche nach Lena');
+  await read(page);
+  for (const id of ['t1', 't2', 't3', 't4']) { await page.click(`[data-act="timeline"][data-id="${id}"]`); }
+  await pick(page, 'gap', 'vor');
   assert.equal(await page.locator('[data-act="next"]').count(), 0);
-  for (const [id, v] of [['s1', 'fakt'], ['s2', 'behauptung'], ['s3', 'meinung'], ['s4', 'meinung']]) {
-    await page.click(`[data-act="sort"][data-id="${id}"][data-v="${v}"]`);
-  }
-  await shot(page, `${label}-3-ausgangslage`);
-  await page.click('[data-act="next"]');
-  ok('Schritt 2 abgeschlossen');
+  await pick(page, 'gap', 'nach');
+  await go(page);
 
-  await act(page, 'open', 'freund');
+  await eilVisible(page, 'Polizei befragt');
+  await read(page);
+  await page.click('[data-act="open"][data-id="freund"]');
+  await page.click('[data-act="open"][data-id="emil"]');
   await page.click('[data-act="chat"][data-i="0"]');
   assert.ok((await page.textContent('body')).includes('passt noch zu seiner Aussage'));
   await page.click('[data-act="chat"][data-i="3"]');
-  await act(page, 'open', 'stefan');
-  await act(page, 'open', 'emil');
+  await go(page);
+  ok('Kapitel 2: Zeitablauf und Widerspruch');
+
+  await eilVisible(page, 'Video von vermisster Lena');
+  assert.ok((await page.textContent('#viewcount')).includes('.'));
+  await read(page);
+  await sort(page, [['v1', 'fakt'], ['v2', 'behauptung'], ['v3', 'behauptung'], ['v4', 'meinung']]);
+  await go(page);
+
+  await eilVisible(page, 'BKA übernimmt');
+  await page.waitForTimeout(700);
+  await shot(page, `${label}-4-bka`);
+  await read(page);
+  assert.ok((await page.textContent('.work')).includes('Hauptkommissarin'));
+  await pick(page, 'stefan', 'offen');
+  await shot(page, `${label}-5-yasira`);
+  await go(page);
+
+  await eilVisible(page, 'Erste Pressekonferenz');
+  await read(page);
+  assert.equal(await page.locator('[data-slider="baer"]').count(), 0);
   await page.locator('[data-slider="freund"]').fill('70');
   await page.locator('[data-slider="maenner"]').fill('40');
-  await page.click('[data-act="first-suspicion"]');
+  await page.click('[data-act="suspicion"]');
   assert.ok((await page.textContent('.meters')).includes('Lenas Freund'));
-  await page.locator('.paper:has-text("Stefans Beitrag") [data-act="pin"]').click();
-  await page.locator('.paper:has-text("Beweisstück 4") [data-act="pin"]').click();
-  await shot(page, `${label}-4-personen`);
-  await page.click('[data-act="next"]');
-  ok('Schritt 3 abgeschlossen, Verdacht und Anzeigen reagieren');
+  await go(page);
+  ok('Kapitel 3: Video, BKA, erster Verdacht');
 
   await page.reload();
-  assert.ok((await page.textContent('h1')).includes('Öffentlichkeit'));
+  await eilVisible(page, 'Erste Demonstrationen');
   ok('Zwischenstand übersteht Neuladen');
 
   const before = await page.textContent('#viewcount');
-  for (const id of ['r1', 'r2', 'r3', 'r4']) {
-    await page.click(`[data-act="rate"][data-id="${id}"][data-v="${id === 'r4' ? 'hoch' : 'mittel'}"]`);
-  }
-  await act(page, 'open', 'baer');
-  await act(page, 'press', 'fakten');
+  await read(page);
+  for (const id of ['r1', 'r2', 'r3', 'r4']) { await page.click(`[data-act="rate"][data-id="${id}"][data-v="${id === 'r4' ? 'hoch' : 'mittel'}"]`); }
+  await shot(page, `${label}-6-quellen`);
+  await go(page);
+  await eilVisible(page, 'Aktiver Heimatschutz');
+  await read(page);
+  await page.click('[data-act="open"][data-id="baer"]');
+  await pick(page, 'pruefen', 'echt');
+  await go(page);
+  await read(page);
+  await page.click('[data-act="press"][data-id="fakten"]');
   assert.notEqual(before, await page.textContent('#viewcount'));
-  await shot(page, `${label}-5-oeffentlichkeit`);
-  await page.click('[data-act="next"]');
-  ok('Schritt 4 abgeschlossen, Druck steigt');
+  await go(page);
+  ok('Kapitel 4: Quellen, Bär, Pressekonferenz');
 
-  for (const id of ['e9', 'e10', 'e11']) { await page.click(`[data-act="clue"][data-id="${id}"][data-v="offen"]`); }
-  await act(page, 'open', 'e12');
+  await eilVisible(page, 'Mob tötet');
+  await read(page);
+  await sort(page, [['m1', 'fakt'], ['m2', 'behauptung'], ['m3', 'meinung']]);
+  await go(page);
+  await eilVisible(page, 'BKA findet keine Spur');
+  await read(page);
+  for (const id of ['e9', 'e10', 'e11']) { await page.click(`[data-act="clue"][data-id="${id}"][data-v="${id === 'e9' ? 'stuetzt' : 'offen'}"]`); }
+  await page.click('[data-act="open"][data-id="e12"]');
+  await shot(page, `${label}-7-forensik`);
+  await go(page);
+  await eilVisible(page, 'Granate');
+  await read(page);
   await page.locator('[data-slider="anders"]').fill('80');
-  await page.click('[data-act="review5"]');
-  await shot(page, `${label}-6-widersprueche`);
-  await page.click('[data-act="next"]');
-  ok('Schritt 5 abgeschlossen');
+  await page.click('[data-act="suspicion"]');
+  await go(page);
+  ok('Kapitel 5: Befunde und Neubewertung');
 
-  const rows = await page.locator('[data-act="classify"][data-v="fakt"]').all();
-  for (const r of rows) { await r.click(); }
-  await page.click('[data-act="review6"]');
-  await shot(page, `${label}-7-lagebesprechung`);
-  await page.click('[data-act="next"]');
-  ok('Schritt 6 abgeschlossen, Bericht offen');
+  await eilVisible(page, 'suspendiert');
+  await read(page);
+  for (const r of await page.locator('[data-act="classify"][data-v="fakt"]').all()) { await r.click(); }
+  await page.click('[data-act="flag"]');
+  await shot(page, `${label}-8-lagebesprechung`);
+
+  // Meldungen bleiben im Verlauf und lassen sich erneut öffnen
+  await page.click('[data-act="drawer"][data-id="news"]');
+  const archive = await page.locator('.archive li').count();
+  assert.ok(archive >= 15, `nur ${archive} Meldungen im Verlauf`);
+  assert.ok((await page.textContent('.archive')).includes('Bereits gelesen'));
+  await page.locator('.archive button', { hasText: '16-Jährige vermisst' }).click();
+  assert.ok((await page.textContent('.archive')).includes('Ihr Vater meldete sie'));
+  await shot(page, `${label}-9-verlauf`);
+  await page.keyboard.press('Escape');
+  await page.locator('.chrono button', { hasText: 'Das Video' }).click();
+  await eilVisible(page, 'Video von vermisster Lena');
+  await page.locator('.chrono button', { hasText: 'Die Suspendierung' }).click();
+  ok('Verlauf und Zeitachse führen zu früheren Meldungen');
+  await go(page);
 
   await page.fill('[data-report="q1"]', 'Lena ist etwas zugestoßen, das Video zeigt aber vielleicht nicht das, was alle glauben.');
-  await act(page, 'q2', 'freund');
-  for (const id of ['e4', 'e9', 'e10']) { await act(page, 'q3', id); }
+  await page.click('[data-act="q2"][data-id="freund"]');
+  for (const id of ['e4', 'e9', 'e10']) { await page.click(`[data-act="q3"][data-id="${id}"]`); }
   await page.fill('[data-report="q4"]', 'Wo die Aufnahme entstanden ist.');
   await page.fill('[data-report="q5"]', 'Den Freund erneut vernehmen.');
   await page.locator('[data-report="confidence"]').fill('65');
-  await shot(page, `${label}-8-bericht`);
   await page.click('[data-act="review"]');
-  await shot(page, `${label}-9-zusammenfassung`);
+  await shot(page, `${label}-10-zusammenfassung`);
 
-  await page.fill('[data-code="klass"]', 'KTEST01');
-  await page.fill('[data-code="teil"]', 'FALSCH');
-  await page.click('[data-act="submit"]');
-  await page.waitForSelector('.error');
-  assert.ok((await page.textContent('.error')).includes('stimmt nicht'));
-  ok('Falscher Code wird klar gemeldet');
-
-  // Abbruch nach dem Speichern: Wiederholung darf keinen zweiten Eintrag erzeugen
-  await page.fill('[data-code="teil"]', code);
-  await page.route('**/rpc/submit_protocol', async (route) => { await route.fetch(); await route.abort(); }, { times: 1 });
-  await page.click('[data-act="submit"]');
-  await page.waitForFunction(() => /Keine Verbindung/.test(document.body.textContent));
-  assert.equal(await page.locator('[data-act="back-report"]').count(), 0);
-  await page.click('[data-act="submit"]');
-  await page.waitForSelector('.closing');
-  const count = await page.evaluate(() => fetch('/__test/count').then((r) => r.json()));
-  assert.equal(count.submissions, label === 'laptop' ? 1 : 2);
-  ok('Wiederholung nach Abbruch ohne Doppeleintrag');
-
-  const end = await page.textContent('.closing');
-  assert.ok(end.includes('Dein Ermittlungsprotokoll wurde erfolgreich übermittelt') && end.includes('nach dem richtigen Täter'));
-  await shot(page, `${label}-10-abschluss`);
+  if (collect) {
+    await page.fill('[data-code="klass"]', 'KTEST01');
+    await page.fill('[data-code="teil"]', 'FALSCH');
+    await page.click('[data-act="submit"]');
+    await page.waitForSelector('.error');
+    assert.ok((await page.textContent('.error')).includes('stimmt nicht'));
+    await page.fill('[data-code="teil"]', code);
+    await page.route('**/rpc/submit_protocol', async (route) => { await route.fetch(); await route.abort(); }, { times: 1 });
+    await page.click('[data-act="submit"]');
+    await page.waitForFunction(() => /Keine Verbindung/.test(document.body.textContent));
+    assert.equal(await page.locator('[data-act="back-report"]').count(), 0);
+    await page.click('[data-act="submit"]');
+    await page.waitForSelector('.closing');
+    assert.ok((await page.textContent('.closing')).includes('erfolgreich übermittelt'));
+    ok('Abgabe mit Wiederholung nach Abbruch');
+  } else {
+    assert.equal(await page.locator('[data-code="klass"]').count(), 0, 'Codefeld trotz ausgesetzter Abgabe');
+    const sent = [];
+    page.on('request', (r) => { if (r.method() === 'POST') { sent.push(r.url()); } });
+    await page.click('[data-act="close-case"]');
+    await page.waitForSelector('.closing');
+    const end = await page.textContent('.closing');
+    assert.ok(!end.includes('übermittelt') && end.includes('nach dem richtigen Täter'));
+    assert.deepEqual(sent, []);
+    const [dl] = await Promise.all([page.waitForEvent('download'), page.click('[data-act="download"]')]);
+    assert.ok(fs.readFileSync(await dl.path(), 'utf8').includes('Den Freund erneut vernehmen'));
+    ok('Abschluss ohne Übertragung, Bericht lässt sich speichern');
+  }
+  await shot(page, `${label}-11-abschluss`);
   await noOverflow(page, label);
   assert.deepEqual(errors, []);
   ok(`Schülerreise ${label} ohne Fehler`);
@@ -167,12 +235,22 @@ async function teacher(browser) {
 (async () => {
   const browser = await chromium.launch();
   await fetch(`${BASE}/__test/seed`);
-  const laptop = await browser.newContext({ viewport: { width: 1366, height: 768 } });
-  await journey(laptop, 'AAAA1111', 'laptop');
+  // Standard: Abgabe ausgesetzt, wie in config.js
+  const off = (ctx) => ctx.route('**/config.js', (r) => r.fulfill({ contentType: 'text/javascript', body: 'window.VIEWS_CONFIG = { collectResults: false };' }));
+  const laptop = await browser.newContext({ viewport: { width: 1366, height: 768 }, acceptDownloads: true });
+  await off(laptop);
+  await journey(laptop, '', 'laptop', false);
   await laptop.close();
-  const tablet = await browser.newContext({ ...devices['iPad (gen 7)'] });
-  await journey(tablet, 'BBBB2222', 'tablet');
+  const tablet = await browser.newContext({ ...devices['iPad (gen 7)'], acceptDownloads: true });
+  await off(tablet);
+  await journey(tablet, '', 'tablet', false);
   await tablet.close();
+  // Abgabe aktiv: gegen die Testumgebung
+  for (const code of ['AAAA1111', 'BBBB2222']) {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await journey(ctx, code, 'abgabe', true);
+    await ctx.close();
+  }
   await teacher(browser);
   await browser.close();
   console.log('Alle Prüfungen bestanden');

@@ -89,8 +89,8 @@
   }
 
   function loginView() {
-    if (!BASE || !CFG.supabaseKey) {
-      return '<div class="t-login"><h1>Lehrkraftbereich</h1><p>Die Ergebnissammlung ist noch nicht eingerichtet. Die Schritte stehen in der README.</p></div>';
+    if (!CFG.collectResults || !BASE || !CFG.supabaseKey) {
+      return '<div class="t-login"><h1>Lehrkraftbereich</h1><p>Die Ergebnissammlung ist zurzeit ausgesetzt. Zum Aktivieren die Schritte in der README befolgen.</p></div>';
     }
     return '<div class="t-login"><h1>Lehrkraftbereich</h1><label class="field"><span>E-Mail</span><input type="email" id="mail" autocomplete="username" value="' + esc(lastMail) + '"></label>' +
       '<label class="field"><span>Passwort</span><input type="password" id="pass" autocomplete="current-password"></label>' +
