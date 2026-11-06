@@ -22,8 +22,8 @@
   function defaults() {
     return {
       started: false, reached: 0, view: 0, finishedStory: false, opened: {}, read: {}, feed: [], met: [], found: [],
-      sorts: {}, choices: {}, timeline: {}, chatHit: false, chatMiss: -1, rates: {}, clues: {}, classes: {}, done: {},
-      weights: {}, history: [], pins: {}, pressure: 0, views: 0, notes: '',
+      sorts: {}, choices: {}, chatHit: false, chatMiss: -1, rates: {}, clues: {}, classes: {}, done: {},
+      weights: {}, history: [], pins: {}, pressure: 0, views: 0, viewBonus: 0, notes: '',
       report: { q1: '', q2: [], q2extra: '', q3: [], q4: '', q5: '', confidence: 50, theory: '' },
       reviewing: false, codes: { klass: '', teil: '' }, submission: null, submitted: false, closed: false
     };
@@ -79,10 +79,22 @@
     });
     return { id: best, value: val };
   }
+  /* Was ohne Beleg als gesichert behandelt wird, schwächt die Beweislage.
+     Richtige Antworten bringen dagegen keine Punkte. */
+  function assumptions() {
+    var n = 0;
+    C.BEATS.forEach(function (b) {
+      b.blocks.forEach(function (x) {
+        if (x.t === 'sort') { x.items.forEach(function (s) { if (state.sorts[s.id] === 'fakt' && s.ref !== 'fakt') { n += 1; } }); }
+        if (x.t === 'rate') { x.items.forEach(function (r) { if (r.unproven && state.rates[r.id] === 'hoch') { n += 1; } }); }
+      });
+    });
+    return n;
+  }
   function evidenceQuality(theory) {
     var counts = { fakt: 0, behauptung: 0, deutung: 0 };
     (state.pins[theory] || []).forEach(function (id) { counts[C.EVIDENCE[id].grade] += 1; });
-    return { counts: counts, score: Math.min(100, counts.fakt * 25 + counts.deutung * 12 + counts.behauptung * 5) };
+    return { counts: counts, score: Math.max(0, Math.min(100, counts.fakt * 25 + counts.deutung * 12 + counts.behauptung * 5) - assumptions() * 5) };
   }
   function pinned(id) {
     var l = lead().id;
@@ -96,9 +108,22 @@
       if (n.beat === beat.id && state.feed.indexOf(n.id) < 0) {
         state.feed.unshift(n.id);
         state.pressure = Math.min(100, state.pressure + n.press);
-        state.views += n.views || 0;
       }
     });
+    if (beat.views) { state.views = beat.views + state.viewBonus; }
+  }
+  /* Die Aufrufe hängen an der Geschichte: Jeder Abschnitt legt einen Stand fest.
+     Dazwischen wächst die Zahl leise um höchstens ein Zehntel des Wegs zum nächsten
+     Ereignis und bleibt dann stehen. Nach großen Ereignissen läuft sie schneller. */
+  function viewRange() {
+    var beat = C.BEATS[state.reached];
+    if (!beat.views) { return { base: 0, gap: 0 }; }
+    var next = C.BEATS[state.reached + 1];
+    return { base: beat.views + state.viewBonus, gap: ((next ? next.views : beat.views * 1.1) - beat.views) / 10 };
+  }
+  function clampViews() {
+    var r = viewRange();
+    state.views = Math.max(r.base, Math.min(r.base + r.gap, state.views));
   }
   function firstSuspicion() { return state.history.filter(function (h) { return h.key === 'firstSuspicion'; })[0]; }
 
@@ -106,7 +131,6 @@
     switch (b.t) {
       case 'sort': return b.items.every(function (i) { return state.sorts[i.id]; });
       case 'choice': return b.must ? state.choices[b.key] === b.must : !!state.choices[b.key];
-      case 'timeline': return C.TIMELINE.every(function (t) { return state.timeline[t.id]; });
       case 'dossiers': return b.items.every(function (i) { return state.opened[i.id]; });
       case 'chat': return state.chatHit;
       case 'sliders': return !!state.done[b.key];
@@ -154,12 +178,20 @@
     }).join('') + '</div>';
   }
   function reply(text) { return text ? '<p class="becker">' + esc(text) + '</p>' : ''; }
-  function sliders() {
-    return '<div class="sliders">' + availableTheories().map(function (t) {
+  function suspicionWord(v) { return C.SUSPICION_SCALE[Math.min(4, Math.floor(v / 20))]; }
+  function sliders(question) {
+    return (question ? '<h3 class="ask">' + esc(question) + '</h3>' : '') + '<div class="sliders">' + availableTheories().map(function (t) {
       var v = state.weights[t.id] || 0;
-      return '<label><span>' + esc(t.name) + '</span><output data-out="' + t.id + '">' + v + '</output>' +
-        '<input type="range" min="0" max="100" step="5" value="' + v + '" data-slider="' + t.id + '"></label>';
+      return '<label><span>' + esc(t.name) + '</span><output data-out="' + t.id + '">' + esc(suspicionWord(v)) + '</output>' +
+        '<input type="range" min="0" max="100" step="5" value="' + v + '" data-slider="' + t.id + '" aria-valuetext="' + esc(suspicionWord(v)) + '">' +
+        '<span class="scale" aria-hidden="true">' + C.SUSPICION_SCALE.map(function (w) { return '<i>' + esc(w) + '</i>'; }).join('') + '</span></label>';
     }).join('') + '</div>';
+  }
+
+  function sortFeedback(s, val) {
+    var html = '<p class="becker"><b>' + (val === s.ref ? 'Das sieht die Akte genauso: ' : 'Die Akte ordnet das anders ein: ') + esc(C.SORT_LABELS[s.ref]) + '.</b> ' + esc(s.note) + '</p>';
+    if (val === 'fakt' && s.ref !== 'fakt') { html += '<p class="hint">Als Tatsache steht das nun als ungeprüfte Annahme in deiner Akte und senkt deine Beweislage, bis du es änderst.</p>'; }
+    return html;
   }
 
   var BLOCKS = {
@@ -167,10 +199,11 @@
     evidence: function (b) { addTo(state.found, b.id); return evidenceCard(b.id); },
     message: function (b) { return '<p class="bubble wide"><small>' + esc(b.from) + '</small>' + esc(b.text) + '</p>'; },
     sort: function (b) {
-      var all = blockDone(b);
-      return '<div class="sorter wide">' + b.items.map(function (s) {
-        return '<div class="sort-row"><p>' + esc(s.text) + '</p>' + choiceRow('sort', s.id, state.sorts[s.id] || '', C.SORT_LABELS) +
-          (all ? '<p class="becker"><b>Vermerk:</b> ' + esc(C.SORT_LABELS[s.ref]) + '. ' + esc(s.note) + '</p>' : '') + '</div>';
+      return '<div class="sorter wide"><p class="order-line">' + esc(b.task) + '</p><dl class="legend">' + Object.keys(C.SORT_LABELS).map(function (k) {
+        return '<dt>' + esc(C.SORT_LABELS[k]) + '</dt><dd>' + esc(C.SORT_HELP[k]) + '</dd>';
+      }).join('') + '</dl>' + b.items.map(function (s) {
+        var val = state.sorts[s.id];
+        return '<div class="sort-row"><p class="src">' + esc(s.who) + '</p><p class="quote">„' + esc(s.text) + '“</p>' + choiceRow('sort', s.id, val || '', C.SORT_LABELS) + (val ? sortFeedback(s, val) : '') + '</div>';
       }).join('') + '</div>';
     },
     choice: function (b) {
@@ -182,9 +215,7 @@
     },
     timeline: function () {
       return '<ol class="timeline wide">' + C.TIMELINE.map(function (t) {
-        var open = state.timeline[t.id];
-        return '<li class="' + (open ? 'open' : '') + '"><button data-act="timeline" data-id="' + t.id + '" aria-expanded="' + !!open + '"><b>' + esc(t.when) + '</b>' +
-          (open ? '<span>' + esc(t.text) + '</span>' : '<span class="muted">Öffnen</span>') + '</button></li>';
+        return '<li class="open"><div class="entry"><b>' + esc(t.when) + '</b><span>' + esc(t.text) + '</span></div></li>';
       }).join('') + '</ol>';
     },
     dossiers: function (b) {
@@ -206,13 +237,14 @@
     },
     sliders: function (b) {
       var had = state.done[b.key];
-      return '<div class="wide">' + sliders() + (had ? reply(b.reply) : '<button class="ghost" data-act="suspicion" data-key="' + b.key + '"' + (lead().id ? '' : ' disabled') + '>' + esc(b.label) + '</button>') + '</div>';
+      return '<div class="wide">' + sliders(b.question) + (had ? reply(b.reply) : '<button class="ghost" data-act="suspicion" data-key="' + b.key + '"' + (lead().id ? '' : ' disabled') + '>' + esc(b.label) + '</button>') + '</div>';
     },
     rate: function (b) {
       addTo(state.found, 'e7');
-      return '<div class="posts wide">' + b.items.map(function (r) {
+      var open = b.items.filter(function (r) { return r.unproven && state.rates[r.id] === 'hoch'; }).length;
+      return '<p class="hint wide">' + esc(b.hint) + '</p><div class="posts wide">' + b.items.map(function (r) {
         return '<article class="post"><header><b>' + esc(r.src) + '</b><small>' + esc(r.meta) + '</small></header><p>' + esc(r.text) + '</p>' + choiceRow('rate', r.id, state.rates[r.id] || '', C.RATE_LABELS) + '</article>';
-      }).join('') + '</div>' + (blockDone(b) ? '<div class="wide">' + reply(b.reply) + '</div>' : '');
+      }).join('') + '</div>' + (blockDone(b) ? '<div class="wide">' + reply(b.reply) + (open ? '<p class="hint">' + (open === 1 ? 'Einer Aussage ohne Beleg vertraust du. Sie steht als ungeprüfte Annahme in deiner Akte und senkt' : open + ' Aussagen ohne Beleg vertraust du. Sie stehen als ungeprüfte Annahmen in deiner Akte und senken') + ' deine Beweislage, bis du das änderst.</p>' : '') + '</div>' : '');
     },
     press: function (b) {
       var cur = b.options.filter(function (o) { return o.id === state.choices.press; })[0];
@@ -399,7 +431,7 @@
     return '<section class="meters" aria-label="Lagebild">' +
       '<button class="meter views" data-act="drawer" data-id="lage"><span>Öffentlicher Druck, Aufrufe</span><b id="viewcount">' + fmt(state.views) + '</b><i class="bar"><em class="hot" data-w="' + state.pressure + '"></em></i></button>' +
       '<button class="meter" data-act="drawer" data-id="lage"><span>Mein Verdacht</span><b class="txt">' + esc(l.id ? theoryName(l.id) : 'Noch offen') + '</b><i class="bar"><em data-w="' + l.value + '"></em></i></button>' +
-      '<button class="meter" data-act="drawer" data-id="lage"><span>' + (warn ? '<em class="warn">Verdacht stärker als die Belege</em>' : 'Beweislage') + '</span><b class="txt">' + (l.id ? q.counts.fakt + ' gesichert, ' + q.counts.behauptung + ' unbestätigt, ' + q.counts.deutung + ' Interpretation' : 'Noch nichts angeheftet') + '</b><i class="bar"><em class="cool" data-w="' + q.score + '"></em></i></button></section>';
+      '<button class="meter" data-act="drawer" data-id="lage"><span>' + (assumptions() ? '<em class="warn">Beweislage: ' + assumptions() + (assumptions() === 1 ? ' ungeprüfte Annahme' : ' ungeprüfte Annahmen') + '</em>' : warn ? '<em class="warn">Verdacht stärker als die Belege</em>' : 'Beweislage') + '</span><b class="txt">' + (l.id ? q.counts.fakt + ' gesichert, ' + q.counts.behauptung + ' unbestätigt, ' + q.counts.deutung + ' Interpretation' : 'Noch nichts angeheftet') + '</b><i class="bar"><em class="cool" data-w="' + q.score + '"></em></i></button></section>';
   }
   function chapterOf(view) { return view === REPORT ? 7 : C.BEATS[view].chapter; }
   function chapters() {
@@ -441,7 +473,7 @@
       var l = lead();
       body = '<h2>Lagebild</h2><p class="hint"><b>Öffentlicher Druck</b> zeigt, wie stark der Fall alle beschäftigt. Er sagt nichts über Schuld.</p>' +
         (state.done.firstSuspicion ? '<p class="hint"><b>Mein Verdacht</b> ist deine Einschätzung, keine Schuldwahrscheinlichkeit.</p>' + sliders() : '<p class="hint">Dein Verdacht wird an Tag 5 freigeschaltet.</p>') +
-        '<p class="hint"><b>Beweislage</b> zählt, was an deinem Verdacht hängt. Gesichertes wiegt mehr als Unbestätigtes.</p>' +
+        '<p class="hint"><b>Beweislage</b> zählt, was an deinem Verdacht hängt. Gesichertes wiegt mehr als Unbestätigtes. Aussagen ohne Beleg, die du als Tatsache einordnest oder denen du vertraust, senken den Wert. Das lässt sich in den jeweiligen Abschnitten ändern.</p>' +
         (l.id ? '<p>' + (state.pins[l.id] || []).map(function (id) { return esc(C.EVIDENCE[id].title); }).join(', ') + '</p>' : '');
     } else if (drawer === 'news') {
       body = archive();
@@ -549,7 +581,6 @@
     news: function (d) { openNews = openNews === d.id ? '' : d.id; state.read[d.id] = true; },
     sort: function (d) { state.sorts[d.id] = d.v; },
     choice: function (d) { state.choices[d.key] = d.id; },
-    timeline: function (d) { state.timeline[d.id] = true; },
     open: function (d) { state.opened[d.id] = true; },
     chat: function (d) {
       var i = Number(d.i);
@@ -569,7 +600,7 @@
     rate: function (d) {
       var first = !state.rates[d.id];
       state.rates[d.id] = d.v;
-      if (first && d.v === 'hoch') { state.pressure = Math.min(100, state.pressure + 3); state.views += 900000; }
+      if (first && d.v === 'hoch') { state.pressure = Math.min(100, state.pressure + 3); state.viewBonus += 20000; state.views += 20000; }
     },
     press: function (d) {
       if (state.choices.press) { return; }
@@ -577,7 +608,8 @@
       var b = BEAT.b9.blocks.filter(function (x) { return x.t === 'press'; })[0];
       var p = b.options.filter(function (x) { return x.id === d.id; })[0];
       state.pressure = Math.min(100, state.pressure + p.press);
-      state.views += p.press * 400000;
+      state.viewBonus += p.press * 10000;
+      state.views += p.press * 10000;
     },
     clue: function (d) {
       state.clues[d.id] = d.v;
@@ -619,7 +651,8 @@
     if (d.slider) {
       state.weights[d.slider] = Number(t.value);
       var out = document.querySelector('[data-out="' + d.slider + '"]');
-      if (out) { out.textContent = t.value; }
+      if (out) { out.textContent = suspicionWord(Number(t.value)); }
+      t.setAttribute('aria-valuetext', suspicionWord(Number(t.value)));
       save(); refreshMeters();
     } else if (d.report) {
       state.report[d.report] = t.value;
@@ -646,11 +679,13 @@
   /* Sobald das Video online ist, läuft der Zähler leise weiter. */
   if (!reduced()) {
     setInterval(function () {
-      if (!state.views || state.submitted || state.closed) { return; }
-      state.views += 37 + Math.floor(Math.random() * 90);
+      var r = viewRange();
+      if (!state.views || state.submitted || state.closed || state.views >= r.base + r.gap) { return; }
+      state.views = Math.min(r.base + r.gap, state.views + Math.ceil(r.gap / 150 * (0.6 + Math.random() * 0.8)));
       var el = document.getElementById('viewcount');
       if (el) { el.textContent = fmt(state.views); }
-    }, 1500);
+    }, 2000);
   }
+  clampViews();
   render();
 })();

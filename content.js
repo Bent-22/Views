@@ -114,7 +114,13 @@ window.VIEWS_CONTENT = (function () {
 
   var GRADES = { fakt: 'Gesichert', behauptung: 'Unbestätigt', deutung: 'Interpretation' };
   var SORT_LABELS = { fakt: 'Tatsache', behauptung: 'Behauptung', meinung: 'Meinung' };
-  var RATE_LABELS = { hoch: 'Belastbar', mittel: 'Unklar', tief: 'Nicht belastbar' };
+  var SORT_HELP = {
+    fakt: 'Eine Information, die durch nachvollziehbare Belege überprüft und bestätigt werden kann.',
+    behauptung: 'Eine Aussage, die jemand aufstellt, für die aber noch kein ausreichender Nachweis vorliegt.',
+    meinung: 'Eine persönliche Einschätzung, Bewertung oder Interpretation.'
+  };
+  var RATE_LABELS = { hoch: 'Können wir vertrauen', tief: 'Können wir nicht vertrauen' };
+  var SUSPICION_SCALE = ['Kaum verdächtig', 'Eher unverdächtig', 'Unklar', 'Eher verdächtig', 'Sehr verdächtig'];
   var CLUE_LABELS = { stuetzt: 'Stützt ihn', schwaecht: 'Schwächt ihn', offen: 'Sagt nichts' };
 
   var TIMELINE = [
@@ -135,24 +141,24 @@ window.VIEWS_CONTENT = (function () {
     { id: 'n3', beat: 'b2', kind: 'post', src: '@nachbarschaft_aktuell', when: 'Tag 2, 19:02', body: 'Betet für die Familie. Wer etwas gesehen hat, bitte melden.', press: 1 },
     { id: 'n4', beat: 'b3', kind: 'eil', src: 'Tagesfunke Regional', when: 'Tag 3, 11:00', head: 'Polizei befragt Lenas Umfeld', body: 'Auch zwei Tage nach dem Verschwinden fehlt jede Spur. Die Ermittler wollen wissen, wer die 16-Jährige zuletzt gesehen hat.', press: 3 },
     { id: 'n5', beat: 'b3', kind: 'debatte', src: 'Kommentare, Tagesfunke', when: 'Tag 3, 12:30', body: '„Die läuft doch nur weg.“ „Eine 16-Jährige verschwindet nicht einfach.“', press: 1 },
-    { id: 'n6', beat: 'b4', kind: 'eil', src: 'Tagesfunke', when: 'Tag 4, 21:52', head: 'Video von vermisster Lena im Netz', body: 'Eine Aufnahme soll die 16-Jährige als Opfer sexualisierter Gewalt zeigen. Sie verbreitet sich rasant. Die Polizei bittet dringend, das Video nicht zu teilen.', press: 22, views: 1400000 },
-    { id: 'n7', beat: 'b4', kind: 'post', src: '@stimmedesvolkes', when: 'Tag 4, 23:10', body: 'Drei Tage weg und die Polizei hat NICHTS?', press: 3, views: 1900000 },
-    { id: 'n8', beat: 'b5', kind: 'eil', src: 'Tagesfunke', when: 'Tag 5, 07:00', head: 'BKA übernimmt: Yasira Saad leitet die Ermittlungen', body: 'Der Fall geht an das Bundeskriminalamt. Die Kommissarin soll Lena finden und die Männer aus dem Video identifizieren.', press: 6, views: 5200000 },
-    { id: 'n9', beat: 'b6', kind: 'news', src: 'Tagesfunke', when: 'Tag 5, 13:00', head: 'Erste Pressekonferenz: keine Festnahme', body: 'Die Ermittler nennen keine Namen und keinen Aufenthaltsort.', press: 4, views: 3100000 },
+    { id: 'n6', beat: 'b4', kind: 'eil', src: 'Tagesfunke', when: 'Tag 4, 21:52', head: 'Video von vermisster Lena im Netz', body: 'Eine Aufnahme soll die 16-Jährige als Opfer sexualisierter Gewalt zeigen. Sie verbreitet sich rasant. Die Polizei bittet dringend, das Video nicht zu teilen.', press: 22 },
+    { id: 'n7', beat: 'b4', kind: 'post', src: '@stimmedesvolkes', when: 'Tag 4, 23:10', body: 'Drei Tage weg und die Polizei hat NICHTS?', press: 3 },
+    { id: 'n8', beat: 'b5', kind: 'eil', src: 'Tagesfunke', when: 'Tag 5, 07:00', head: 'BKA übernimmt: Yasira Saad leitet die Ermittlungen', body: 'Der Fall geht an das Bundeskriminalamt. Die Kommissarin soll Lena finden und die Männer aus dem Video identifizieren.', press: 6 },
+    { id: 'n9', beat: 'b6', kind: 'news', src: 'Tagesfunke', when: 'Tag 5, 13:00', head: 'Erste Pressekonferenz: keine Festnahme', body: 'Die Ermittler nennen keine Namen und keinen Aufenthaltsort.', press: 4 },
     { id: 'n10', beat: 'b6', kind: 'debatte', src: 'Kommentare, Tagesfunke', when: 'Tag 5, 13:20', body: '„Wozu gibt es das BKA?“ „Lasst sie doch erst mal arbeiten.“', press: 2 },
-    { id: 'n11', beat: 'b7', kind: 'eil', src: 'Tagesfunke', when: 'Tag 5, 18:20', head: 'Erste Demonstrationen in mehreren Städten', body: 'Tausende gehen wegen des Videos auf die Straße, dazu kommen Gegendemonstrationen. Im Netz kursieren immer mehr angebliche Augenzeugenberichte.', press: 10, views: 5400000 },
-    { id: 'n12', beat: 'b8', kind: 'eil', src: 'Tagesfunke', when: 'Tag 6, 12:15', head: 'Aktiver Heimatschutz ruft zu Selbstjustiz auf', body: 'Die rechtsradikale Gruppe wächst rasant. Eine Videobotschaft ihres Anführers erreicht in Stunden ein Millionenpublikum.', press: 12, views: 8300000 },
+    { id: 'n11', beat: 'b7', kind: 'eil', src: 'Tagesfunke', when: 'Tag 5, 18:20', head: 'Erste Demonstrationen in mehreren Städten', body: 'Tausende gehen wegen des Videos auf die Straße, dazu kommen Gegendemonstrationen. Im Netz kursieren immer mehr angebliche Augenzeugenberichte.', press: 10 },
+    { id: 'n12', beat: 'b8', kind: 'eil', src: 'Tagesfunke', when: 'Tag 6, 12:15', head: 'Aktiver Heimatschutz ruft zu Selbstjustiz auf', body: 'Die rechtsradikale Gruppe wächst rasant. Eine Videobotschaft ihres Anführers erreicht in Stunden ein Millionenpublikum.', press: 12 },
     { id: 'n13', beat: 'b8', kind: 'debatte', src: 'Kommentare, Tagesfunke', when: 'Tag 6, 13:05', body: '[Beitrag wegen Volksverhetzung entfernt] „Endlich tut jemand was.“ „Das ist genau die Gewalt, die uns spaltet.“', press: 2 },
-    { id: 'n14', beat: 'b9', kind: 'news', src: 'Tagesfunke', when: 'Tag 6, 16:00', head: 'Innenministerin kündigt Erklärung an', body: 'Die Regierung will Handlungsfähigkeit zeigen.', press: 3, views: 2000000 },
-    { id: 'n15', beat: 'b10', kind: 'eil', src: 'Tagesfunke', when: 'Tag 7, 00:40', head: 'Mob tötet Unbeteiligten', body: 'In der Nacht ist ein Mann von einer aufgebrachten Menge getötet worden. Er hatte mit dem Fall nichts zu tun. Die Stimmung im Land kippt.', press: 12, views: 6100000 },
-    { id: 'n16', beat: 'b11', kind: 'eil', src: 'Tagesfunke', when: 'Tag 7, 10:05', head: 'BKA findet keine Spur zu den drei Männern', body: 'Sechs Tage nach Lenas Verschwinden gibt es weder Namen noch Tatort. Die ersten technischen Untersuchungen liegen vor.', press: 5, views: 2800000 },
+    { id: 'n14', beat: 'b9', kind: 'news', src: 'Tagesfunke', when: 'Tag 6, 16:00', head: 'Innenministerin kündigt Erklärung an', body: 'Die Regierung will Handlungsfähigkeit zeigen.', press: 3 },
+    { id: 'n15', beat: 'b10', kind: 'eil', src: 'Tagesfunke', when: 'Tag 7, 00:40', head: 'Mob tötet Unbeteiligten', body: 'In der Nacht ist ein Mann von einer aufgebrachten Menge getötet worden. Er hatte mit dem Fall nichts zu tun. Die Stimmung im Land kippt.', press: 12 },
+    { id: 'n16', beat: 'b11', kind: 'eil', src: 'Tagesfunke', when: 'Tag 7, 10:05', head: 'BKA findet keine Spur zu den drei Männern', body: 'Sechs Tage nach Lenas Verschwinden gibt es weder Namen noch Tatort. Die ersten technischen Untersuchungen liegen vor.', press: 5 },
     { id: 'n17', beat: 'b11', kind: 'post', src: '@stimmedesvolkes', when: 'Tag 7, 10:30', body: 'Wieso findet das BKA keinen einzigen von denen? Wollen die nicht?', press: 2 },
-    { id: 'n18', beat: 'b12', kind: 'eil', src: 'Tagesfunke', when: 'Tag 7, 16:30', head: 'Granate bei Demonstration: Polizist stirbt', body: 'Der Beamte warf sich schützend vor seine Kollegen, unter ihnen Yasira Saad. Sie blieb unverletzt.', press: 8, views: 7200000 },
-    { id: 'n19', beat: 'b13', kind: 'eil', src: 'Tagesfunke', when: 'Tag 8, 08:00', head: 'Ermittlungsleiterin Saad suspendiert', body: 'Sie soll Interna an die Presse gegeben haben. Welche, ist bisher unklar. Lena Palmer bleibt verschwunden.', press: 8, views: 9600000 }
+    { id: 'n18', beat: 'b12', kind: 'eil', src: 'Tagesfunke', when: 'Tag 7, 16:30', head: 'Granate bei Demonstration: Polizist stirbt', body: 'Der Beamte warf sich schützend vor seine Kollegen, unter ihnen Yasira Saad. Sie blieb unverletzt.', press: 8 },
+    { id: 'n19', beat: 'b13', kind: 'eil', src: 'Tagesfunke', when: 'Tag 8, 08:00', head: 'Ermittlungsleiterin Saad suspendiert', body: 'Sie soll Interna an die Presse gegeben haben. Welche, ist bisher unklar. Lena Palmer bleibt verschwunden.', press: 8 }
   ];
 
   /* Die Geschichte: ein Abschnitt nach dem anderen.
-     short = Eintrag auf der Zeitachse, tie = Bezug der Meldung zum Ermittlungsstand,
+     short = Eintrag auf der Zeitachse, views = Aufrufe des Videos zu diesem Zeitpunkt der Geschichte, tie = Bezug der Meldung zum Ermittlungsstand,
      context = Handlungskontext, order = Ermittlungsauftrag, blocks = Inhalte in Reihenfolge. */
   var BEATS = [
     { id: 'b1', chapter: 1, when: 'Tag 2', short: 'Lena wird vermisst', news: 'n1',
@@ -161,10 +167,10 @@ window.VIEWS_CONTENT = (function () {
       order: 'Lerne Lena und ihren Vater kennen. Trenne dann, was wirklich feststeht, von dem, was nur gesagt wird.',
       blocks: [
         { t: 'person', id: 'lena' }, { t: 'person', id: 'frank' }, { t: 'evidence', id: 'e1' },
-        { t: 'sort', key: 'start', items: [
-          { id: 's1', text: 'Lenas Handy ist seit gestern aus.', ref: 'fakt', note: 'Das belegt der Netzbetreiber.' },
-          { id: 's2', text: 'Lena wollte zu ihrem Freund.', ref: 'behauptung', note: 'Das sagt ihr Vater. Geprüft ist es noch nicht.' },
-          { id: 's3', text: 'Ihr Vater hätte besser aufpassen müssen.', ref: 'meinung', note: 'Das schreiben Leute unter die Meldung. Es hilft dem Fall nicht.' }
+        { t: 'sort', key: 'start', task: 'In der Akte und unter der Meldung stehen drei Aussagen. Entscheide bei jeder: Ist sie schon belegt, bisher nur behauptet oder eine persönliche Bewertung?', items: [
+          { id: 's1', who: 'Aus den Daten des Netzbetreibers', text: 'Lenas Handy ist seit gestern aus.', ref: 'fakt', note: 'Das belegt der Netzbetreiber.' },
+          { id: 's2', who: 'Aussage des Vaters in der Vermisstenanzeige', text: 'Lena wollte zu ihrem Freund.', ref: 'behauptung', note: 'Das sagt ihr Vater. Geprüft ist es noch nicht.' },
+          { id: 's3', who: 'Kommentar unter der Meldung', text: 'Ihr Vater hätte besser aufpassen müssen.', ref: 'meinung', note: 'Das schreiben Leute unter die Meldung. Es hilft dem Fall nicht.' }
         ] },
         { t: 'choice', key: 'hunch', title: 'Was glaubst du gerade?', options: [
           { id: 'weg', label: 'Lena ist von sich aus weg', reply: 'Notiert. Am Ende vergleichst du das mit deinem letzten Stand.' },
@@ -194,21 +200,21 @@ window.VIEWS_CONTENT = (function () {
         { t: 'chat' }
       ], next: 'Ein ruhiger Tag. Dann, am Abend, klingeln überall die Handys.' },
 
-    { id: 'b4', chapter: 3, when: 'Tag 4', short: 'Das Video', news: 'n6',
+    { id: 'b4', views: 180000, chapter: 3, when: 'Tag 4', short: 'Das Video', news: 'n6',
       tie: 'Lena ist seit drei Tagen weg. Jetzt kennt das ganze Land ihren Namen.',
       context: 'Drei Tage lang war Lena nur ein Name in deiner Akte. Seit 21:14 Uhr kursiert ein Video. Zu sehen sind Lena, drei Männer und jemand, der filmt. Du bekommst nur das Protokoll, das Video selbst nicht.',
       order: 'Im Netz stehen längst fertige Urteile. Prüfe, was sich aus dem Protokoll tatsächlich ableiten lässt.',
       blocks: [
         { t: 'evidence', id: 'e2' },
-        { t: 'sort', key: 'video', items: [
-          { id: 'v1', text: 'Auf dem Video sind drei Männer zu sehen.', ref: 'fakt', note: 'Das steht im Protokoll.' },
-          { id: 'v2', text: 'Das Video zeigt, was an Tag 1 passiert ist.', ref: 'behauptung', note: 'Wann es aufgenommen wurde, ist unbekannt.' },
-          { id: 'v3', text: 'Die Täter sind Ausländer.', ref: 'behauptung', note: 'Das schließt das Netz aus dem Aussehen. Belegt ist nichts.' },
-          { id: 'v4', text: 'Die Polizei tut zu wenig.', ref: 'meinung', note: 'Kann man finden. Beweisen kann man es nicht.' }
+        { t: 'sort', key: 'video', task: 'Diese vier Aussagen kursieren gerade zum Video. Vergleiche sie mit dem Protokoll und entscheide bei jeder: Ist sie schon belegt, bisher nur behauptet oder eine persönliche Bewertung?', items: [
+          { id: 'v1', who: 'Aus dem Sicherungsprotokoll', text: 'Auf dem Video sind drei Männer zu sehen.', ref: 'fakt', note: 'Das steht im Protokoll.' },
+          { id: 'v2', who: 'Beitrag im Netz', text: 'Das Video zeigt, was an Tag 1 passiert ist.', ref: 'behauptung', note: 'Wann es aufgenommen wurde, ist unbekannt.' },
+          { id: 'v3', who: 'Beitrag im Netz', text: 'Die Täter sind Ausländer.', ref: 'behauptung', note: 'Das schließt das Netz aus dem Aussehen. Belegt ist nichts.' },
+          { id: 'v4', who: 'Kommentar im Netz', text: 'Die Polizei tut zu wenig.', ref: 'meinung', note: 'Kann man finden. Beweisen kann man es nicht.' }
         ] }
       ], next: 'Noch in der Nacht fällt eine Entscheidung in Wiesbaden.' },
 
-    { id: 'b5', chapter: 3, when: 'Tag 5', short: 'Das BKA übernimmt', news: 'n8',
+    { id: 'b5', views: 1900000, chapter: 3, when: 'Tag 5', short: 'Das BKA übernimmt', news: 'n8',
       tie: 'Deine Akte geht ans BKA. Du bleibst im Team.',
       context: 'Der Fall ist jetzt zu groß für die Region. Yasira Saad übernimmt die Leitung, Michael Becker arbeitet mit ihr. Sie lesen deine Akte und haben sofort eine Frage an dich.',
       order: 'Yasira erfuhr durch einen Journalisten von dem Video. Prüfe, wann seine Meldung erschien und was seine Erklärung taugt.',
@@ -216,33 +222,34 @@ window.VIEWS_CONTENT = (function () {
         { t: 'person', id: 'yasira' }, { t: 'person', id: 'michael' },
         { t: 'message', from: 'Yasira Saad', text: 'Ich saß gestern beim Date, als das Video kam. Stefan hatte es schon auf dem Handy. Sieh dir das bitte an.' },
         { t: 'person', id: 'stefan' }, { t: 'evidence', id: 'e6' },
-        { t: 'choice', key: 'stefan', title: 'Wie liest du die 19 Minuten?', options: [
-          { id: 'verdacht', label: 'Verdächtig früh', reply: 'Vielleicht. Aber früh sein ist kein Beweis, solange die Quelle unklar bleibt.' },
-          { id: 'normal', label: 'Normal für seinen Beruf', reply: 'Möglich. Dann sollte sich sein Hinweis belegen lassen. Bisher tut er das nicht.' },
-          { id: 'offen', label: 'Das reicht nicht für ein Urteil', reply: 'Sauber. Die Frage bleibt in der Akte.' }
+        { t: 'message', from: 'Michael Becker', text: 'Zur Einordnung: Das Video ging um 21:14 Uhr online, Stefans Meldung um 21:33 Uhr. Dazwischen liegen 19 Minuten. Das ist interessant, weil das Video da noch ganz neu war. Entweder war Stefan einfach schnell, oder er hatte eine besondere Quelle. Er nennt nur „einen Hinweis aus dem Netz“, und belegt ist das nicht.' },
+        { t: 'choice', key: 'stefan', title: 'Stefan berichtete schon 19 Minuten nach dem Upload über das Video. Wie bewertest du diesen zeitlichen Vorsprung?', options: [
+          { id: 'verdacht', label: 'Der frühe Zeitpunkt ist auffällig und sollte überprüft werden', reply: 'Vielleicht. Aber früh sein ist kein Beweis, solange die Quelle unklar bleibt.' },
+          { id: 'normal', label: 'Für seine Arbeit als Journalist könnte das durchaus normal sein', reply: 'Möglich. Dann sollte sich sein Hinweis belegen lassen. Bisher tut er das nicht.' },
+          { id: 'offen', label: 'Aus dem Vorsprung allein lässt sich noch kein Verdacht ableiten', reply: 'Sauber. Die Frage bleibt in der Akte.' }
         ] }
       ], next: 'Mittags will Yasira wissen, wo du stehst.' },
 
-    { id: 'b6', chapter: 3, when: 'Tag 5', short: 'Erster Verdacht', news: 'n9',
+    { id: 'b6', views: 2600000, chapter: 3, when: 'Tag 5', short: 'Erster Verdacht', news: 'n9',
       tie: 'Die Öffentlichkeit erwartet Namen. Ihr habt keine.',
       context: 'Erinnerst du dich? Lenas Freund hat den Chat verschwiegen, Stefan hatte das Video früh, und die drei Männer sind unbekannt. Frank Palmer kann kaum etwas beitragen. Mehr habt ihr nicht.',
-      order: 'Yasira braucht deinen Stand. Stelle ein, wie plausibel dir jede Erklärung erscheint. Das ist keine Schuldwahrscheinlichkeit.',
-      blocks: [{ t: 'sliders', key: 'firstSuspicion', label: 'Ersten Verdacht festhalten', reply: 'Festgehalten. Ein Verdacht ist noch kein Beweis, und du kannst ihn jederzeit oben im Lagebild ändern.' }],
+      order: 'Yasira braucht deinen Stand. Ein Verdacht ist keine Schuldfeststellung.',
+      blocks: [{ t: 'sliders', key: 'firstSuspicion', question: 'Wie stark verdächtigst du die einzelnen Personen nach den bisherigen Erkenntnissen?', label: 'Ersten Verdacht festhalten', reply: 'Festgehalten. Ein Verdacht ist noch kein Beweis, und du kannst ihn jederzeit oben im Lagebild ändern.' }],
       next: 'Am Abend gehen die ersten Menschen auf die Straße.' },
 
-    { id: 'b7', chapter: 4, when: 'Tag 5', short: 'Demonstrationen', news: 'n11',
+    { id: 'b7', views: 3400000, chapter: 4, when: 'Tag 5', short: 'Demonstrationen', news: 'n11',
       tie: 'Die Hinweise aus dem Netz landen jetzt auf deinem Tisch.',
       context: 'Das Video verbreitet sich inzwischen rasant, die Aufrufe steigen im Minutentakt. Gleichzeitig tauchen immer mehr angebliche Augenzeugenberichte auf. Jeder davon klingt dringend.',
-      order: 'Prüfe, welchen dieser Aussagen ihr als Ermittler tatsächlich vertrauen könnt.',
-      blocks: [{ t: 'rate', items: [
-        { id: 'r1', evidence: 'e7', src: '@wahrheit_lokal', text: 'Ich kenne die Halle aus dem Video. Industriegebiet bei uns um die Ecke!!', meta: '38.000 Mal geteilt' },
-        { id: 'r2', src: 'Tagesfunke', text: 'Insider: Die Ermittler haben längst eine heiße Spur.', meta: 'Quelle nicht genannt' },
-        { id: 'r3', src: '@klarblick', text: 'Alles Schauspieler. Oder Geheimdienst. Oder KI. Glaubt gar nichts mehr.', meta: '212 Likes' },
+      order: 'Welche dieser Aussagen können wir als Ermittler glauben, und auf welche sollten wir uns lieber nicht verlassen?',
+      blocks: [{ t: 'rate', hint: 'Lässt sich eine Aussage noch nicht prüfen, verlassen wir uns vorerst nicht auf sie. Das heißt nicht, dass sie falsch ist, nur dass sie noch nicht belegt ist.', items: [
+        { id: 'r1', evidence: 'e7', unproven: true, src: '@wahrheit_lokal', text: 'Ich kenne die Halle aus dem Video. Industriegebiet bei uns um die Ecke!!', meta: '38.000 Mal geteilt' },
+        { id: 'r2', unproven: true, src: 'Tagesfunke', text: 'Insider: Die Ermittler haben längst eine heiße Spur.', meta: 'Quelle nicht genannt' },
+        { id: 'r3', unproven: true, src: '@klarblick', text: 'Alles Schauspieler. Oder Geheimdienst. Oder KI. Glaubt gar nichts mehr.', meta: '212 Likes' },
         { id: 'r4', src: 'Polizei, Pressestelle', text: 'Bitte teilt das Video nicht. Hinweise nur über die Hotline.', meta: 'Offizielle Mitteilung' }
       ], reply: 'Michael Becker: „Von all dem Lärm kann ich genau eine Zeile in die Akte schreiben.“' }],
       next: 'Am nächsten Mittag meldet sich jemand, der vom Fall profitiert.' },
 
-    { id: 'b8', chapter: 4, when: 'Tag 6', short: 'Selbstjustiz', news: 'n12',
+    { id: 'b8', views: 5200000, chapter: 4, when: 'Tag 6', short: 'Selbstjustiz', news: 'n12',
       tie: 'Die Wut aus deinem Feed hat jetzt einen Anführer.',
       context: 'Aus den Protesten ist eine Bewegung geworden. Der Aktive Heimatschutz gibt sich als Bürgerwehr und fordert, die Männer aus dem Video selbst zu jagen. Sein Anführer nennt sich Bär.',
       order: 'Yasira will wissen, was an Bärs Botschaft geprüft werden muss. Sieh dir die neue Akte an und lege die Priorität fest.',
@@ -255,7 +262,7 @@ window.VIEWS_CONTENT = (function () {
         ] }
       ], next: 'Das Innenministerium ruft an.' },
 
-    { id: 'b9', chapter: 4, when: 'Tag 6', short: 'Die Pressekonferenz', news: 'n14',
+    { id: 'b9', views: 5600000, chapter: 4, when: 'Tag 6', short: 'Die Pressekonferenz', news: 'n14',
       tie: 'Was ihr heute sagt, wird morgen die Schlagzeile sein.',
       context: 'Die Demonstrationen werden größer, und die Regierung muss reagieren. Die Innenministerin, die Yasira zum Gesicht der Ermittlung gemacht hat, will in zehn Minuten etwas sagen können.',
       order: 'Entscheide, was sie mitbekommt. Du kannst das nicht zurücknehmen.',
@@ -268,31 +275,31 @@ window.VIEWS_CONTENT = (function () {
         ] }
       ], next: 'In der Nacht klingelt dein Telefon.' },
 
-    { id: 'b10', chapter: 5, when: 'Tag 7', short: 'Der Mob', news: 'n15',
+    { id: 'b10', views: 6900000, chapter: 5, when: 'Tag 7', short: 'Der Mob', news: 'n15',
       tie: 'Es gibt den ersten Toten in einem Fall, in dem du noch keinen Täter kennst.',
       context: 'Erst Wut im Netz, dann Demonstrationen, jetzt ein Toter. Er hat mit Lena nichts zu tun, doch im Netz wird trotzdem behauptet, er sei einer der drei Männer. Die Lage entgleitet.',
       order: 'Halte fest, was hier gesichert ist und welche Schlussfolgerung die Öffentlichkeit zieht.',
-      blocks: [{ t: 'sort', key: 'mob', items: [
-        { id: 'm1', text: 'Ein Unbeteiligter ist tot.', ref: 'fakt', note: 'Das haben die Ermittler bestätigt.' },
-        { id: 'm2', text: 'Er war einer der Männer aus dem Video.', ref: 'behauptung', note: 'Dafür gibt es keinen Beleg.' },
-        { id: 'm3', text: 'Das BKA trägt die Schuld daran.', ref: 'meinung', note: 'Eine Wertung, die gerade viele teilen.' }
+      blocks: [{ t: 'sort', key: 'mob', task: 'Nach dieser Nacht stehen drei Aussagen im Raum. Entscheide bei jeder: Ist sie schon belegt, bisher nur behauptet oder eine persönliche Bewertung?', items: [
+        { id: 'm1', who: 'Mitteilung der Ermittler', text: 'Ein Unbeteiligter ist tot.', ref: 'fakt', note: 'Das haben die Ermittler bestätigt.' },
+        { id: 'm2', who: 'Beitrag im Netz', text: 'Er war einer der Männer aus dem Video.', ref: 'behauptung', note: 'Dafür gibt es keinen Beleg.' },
+        { id: 'm3', who: 'Kommentar im Netz', text: 'Das BKA trägt die Schuld daran.', ref: 'meinung', note: 'Eine Wertung, die gerade viele teilen.' }
       ] }], next: 'Am Morgen kommen die ersten technischen Ergebnisse.' },
 
-    { id: 'b11', chapter: 5, when: 'Tag 7', short: 'Die Forensik', news: 'n16',
+    { id: 'b11', views: 7300000, chapter: 5, when: 'Tag 7', short: 'Die Forensik', news: 'n16',
       tie: 'Die Öffentlichkeit liest: Versagen. Du liest die Rohdaten.',
       context: 'Die ersten technischen Untersuchungen liegen vor. Einige Ergebnisse passen zu deiner bisherigen Theorie, andere werfen neue Fragen auf. Erinnerst du dich an Emil? Er hat Lena an Tag 1 in ihrer grauen Jacke gesehen.',
       order: 'Was bedeuten die Befunde für deinen aktuellen Verdacht?',
       blocks: [{ t: 'clues', items: ['e9', 'e10', 'e11'] }, { t: 'optional', id: 'e12', label: 'Zusatzbericht zur Hotline (freiwillig)' }],
       next: 'Am Nachmittag rückt das Team zu einer Demonstration aus.' },
 
-    { id: 'b12', chapter: 5, when: 'Tag 7', short: 'Die Granate', news: 'n18',
+    { id: 'b12', views: 8100000, chapter: 5, when: 'Tag 7', short: 'Die Granate', news: 'n18',
       tie: 'Yasira war dabei. Ein Kollege hat sie mit seinem Leben geschützt.',
       context: 'Die Lage wird lebensgefährlich, auch für euer Team. Die Akte ist inzwischen dick, doch die Befunde passen nicht zusammen: kein Tatort, kein Treffer, eine Jacke, die nicht stimmt. Yasira fragt noch am Abend nach deinem Stand.',
       order: 'Überprüfe deine Einschätzung. Eine neue Erklärung steht zur Auswahl: Das Video zeigt nicht, was es zu zeigen scheint.',
-      blocks: [{ t: 'sliders', key: 'review5', label: 'Aktuellen Stand festhalten', reply: 'Dein Stand ist vermerkt.' }],
+      blocks: [{ t: 'sliders', key: 'review5', question: 'Wie verdächtig sind die einzelnen Personen und Erklärungen für dich zum jetzigen Ermittlungsstand?', label: 'Aktuellen Stand festhalten', reply: 'Dein Stand ist vermerkt.' }],
       next: 'Am nächsten Morgen ist Yasiras Büro leer.' },
 
-    { id: 'b13', chapter: 6, when: 'Tag 8', short: 'Die Suspendierung', news: 'n19',
+    { id: 'b13', views: 9200000, chapter: 6, when: 'Tag 8', short: 'Die Suspendierung', news: 'n19',
       tie: 'Ab jetzt hängt die Ermittlung an dem, was in deiner Akte steht.',
       context: 'Yasira ist suspendiert, Michael Becker übernimmt die Lagebesprechung. Acht Tage sind vergangen, Lena ist nicht gefunden, und das Land hat längst ein Urteil. Bevor du deinen Bericht schreibst, ordnet ihr gemeinsam die Akte.',
       order: 'Vergleiche deinen ersten Verdacht mit deinem heutigen Stand und ordne alle Beweisstücke ein.',
@@ -318,7 +325,7 @@ window.VIEWS_CONTENT = (function () {
 
   return {
     VERSION: 2, CHAPTERS: CHAPTERS, THEORIES: THEORIES, PERSONS: PERSONS, EVIDENCE: EVIDENCE, GRADES: GRADES,
-    SORT_LABELS: SORT_LABELS, RATE_LABELS: RATE_LABELS, CLUE_LABELS: CLUE_LABELS, TIMELINE: TIMELINE, CHAT_TARGET: CHAT_TARGET,
+    SORT_LABELS: SORT_LABELS, SORT_HELP: SORT_HELP, SUSPICION_SCALE: SUSPICION_SCALE, RATE_LABELS: RATE_LABELS, CLUE_LABELS: CLUE_LABELS, TIMELINE: TIMELINE, CHAT_TARGET: CHAT_TARGET,
     NEWS: NEWS, BEATS: BEATS, CLOSING: CLOSING, REPORT_QUESTIONS: REPORT_QUESTIONS
   };
 })();

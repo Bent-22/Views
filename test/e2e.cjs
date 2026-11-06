@@ -42,7 +42,15 @@ async function journey(context, code, label, collect) {
   await shot(page, `${label}-2-eilmeldung`);
   assert.equal(await page.locator('[data-act="next"]').count(), 0);
   await read(page);
+  // Aufgabe erklärt die drei Begriffe, Aussage steht getrennt, Rückmeldung kommt sofort
+  assert.ok((await page.textContent('.legend')).includes('nachvollziehbare Belege'));
+  await sort(page, [['s3', 'fakt']]);
+  assert.ok((await page.textContent('.sort-row:has-text("besser aufpassen")')).includes('Die Akte ordnet das anders ein'));
+  assert.ok((await page.textContent('.meters')).includes('1 ungeprüfte Annahme'));
   await sort(page, [['s1', 'fakt'], ['s2', 'behauptung'], ['s3', 'meinung']]);
+  assert.ok(!(await page.textContent('.meters')).includes('ungeprüfte'));
+  assert.ok((await page.textContent('.sort-row:has-text("Handy")')).includes('Das sieht die Akte genauso'));
+  await shot(page, `${label}-einordnen`);
   await pick(page, 'hunch', 'weg');
   await check(later);
   await shot(page, `${label}-3-kapitel1`);
@@ -51,7 +59,11 @@ async function journey(context, code, label, collect) {
 
   await eilVisible(page, 'Suche nach Lena');
   await read(page);
-  for (const id of ['t1', 't2', 't3', 't4']) { await page.click(`[data-act="timeline"][data-id="${id}"]`); }
+  // Zeitstrahl ist ohne Aufdecken vollständig sichtbar
+  assert.equal(await page.locator('.timeline .entry').count(), 4);
+  assert.equal(await page.locator('.timeline button').count(), 0);
+  assert.ok((await page.textContent('.timeline')).includes('Das Handy geht aus'));
+  await shot(page, `${label}-zeitstrahl`);
   await pick(page, 'gap', 'vor');
   assert.equal(await page.locator('[data-act="next"]').count(), 0);
   await pick(page, 'gap', 'nach');
@@ -68,7 +80,7 @@ async function journey(context, code, label, collect) {
   ok('Kapitel 2: Zeitablauf und Widerspruch');
 
   await eilVisible(page, 'Video von vermisster Lena');
-  assert.ok((await page.textContent('#viewcount')).includes('.'));
+  assert.ok((await page.textContent('#viewcount')).replace(/\D/g, '').length <= 6, 'Zähler am ersten Abend zu hoch');
   await read(page);
   await sort(page, [['v1', 'fakt'], ['v2', 'behauptung'], ['v3', 'behauptung'], ['v4', 'meinung']]);
   await go(page);
@@ -78,6 +90,8 @@ async function journey(context, code, label, collect) {
   await shot(page, `${label}-4-bka`);
   await read(page);
   assert.ok((await page.textContent('.work')).includes('Hauptkommissarin'));
+  const work = await page.textContent('.work');
+  assert.ok(work.indexOf('Dazwischen liegen 19 Minuten') >= 0 && work.indexOf('Dazwischen liegen 19 Minuten') < work.indexOf('zeitlichen Vorsprung'), '19 Minuten nicht vorher erklärt');
   await pick(page, 'stefan', 'offen');
   await shot(page, `${label}-5-yasira`);
   await go(page);
@@ -85,6 +99,13 @@ async function journey(context, code, label, collect) {
   await eilVisible(page, 'Erste Pressekonferenz');
   await read(page);
   assert.equal(await page.locator('[data-slider="baer"]').count(), 0);
+  assert.ok((await page.textContent('.ask')).includes('Wie stark verdächtigst du'));
+  assert.equal(await page.locator('.sliders label').first().locator('.scale i').count(), 5);
+  await page.locator('[data-slider="stefan"]').fill('90');
+  assert.equal(await page.textContent('[data-out="stefan"]'), 'Sehr verdächtig');
+  await shot(page, `${label}-slider`);
+  await page.locator('[data-slider="stefan"]').fill('0');
+  assert.equal(await page.textContent('[data-out="stefan"]'), 'Kaum verdächtig');
   await page.locator('[data-slider="freund"]').fill('70');
   await page.locator('[data-slider="maenner"]').fill('40');
   await page.click('[data-act="suspicion"]');
@@ -92,13 +113,23 @@ async function journey(context, code, label, collect) {
   await go(page);
   ok('Kapitel 3: Video, BKA, erster Verdacht');
 
+  const num = (s) => Number(s.replace(/\D/g, ''));
+  const viewsBefore = num(await page.textContent('#viewcount'));
   await page.reload();
   await eilVisible(page, 'Erste Demonstrationen');
+  assert.ok(num(await page.textContent('#viewcount')) <= viewsBefore + 200000, 'Zähler wächst beim Neuladen');
   ok('Zwischenstand übersteht Neuladen');
 
   const before = await page.textContent('#viewcount');
   await read(page);
-  for (const id of ['r1', 'r2', 'r3', 'r4']) { await page.click(`[data-act="rate"][data-id="${id}"][data-v="${id === 'r4' ? 'hoch' : 'mittel'}"]`); }
+  for (const id of ['r1', 'r2', 'r3', 'r4']) { await page.click(`[data-act="rate"][data-id="${id}"][data-v="${id === 'r4' ? 'hoch' : 'tief'}"]`); }
+  assert.equal(await page.locator('[data-act="rate"][data-id="r1"]').count(), 2);
+  assert.ok((await page.textContent('.work')).includes('nicht, dass sie falsch ist'));
+  await page.click('[data-act="rate"][data-id="r1"][data-v="hoch"]');
+  assert.ok((await page.textContent('.meters')).includes('1 ungeprüfte Annahme'));
+  assert.ok((await page.textContent('.work')).includes('senkt deine Beweislage'));
+  await page.click('[data-act="rate"][data-id="r1"][data-v="tief"]');
+  assert.ok(!(await page.textContent('.meters')).includes('ungeprüfte'));
   await shot(page, `${label}-6-quellen`);
   await go(page);
   await eilVisible(page, 'Aktiver Heimatschutz');
@@ -130,6 +161,8 @@ async function journey(context, code, label, collect) {
   ok('Kapitel 5: Befunde und Neubewertung');
 
   await eilVisible(page, 'suspendiert');
+  const final = num(await page.textContent('#viewcount'));
+  assert.ok(final > 9000000 && final < 11000000, `Zähler am Ende: ${final}`);
   await read(page);
   for (const r of await page.locator('[data-act="classify"][data-v="fakt"]').all()) { await r.click(); }
   await page.click('[data-act="flag"]');
